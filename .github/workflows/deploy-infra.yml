@@ -23,51 +23,23 @@ jobs:
       - name: create resource group
         run: az group create --name ${{ env.rg-name }} --location ${{ env.location }}
 
-      - name: create storage and queue
-        id: storage
+      - name: deploy infra
+        id: infra
         run: |
           RESULT=$(az deployment group create \
             --resource-group ${{ env.rg-name }} \
-            --template-file infra/queue.bicep \
+            --template-file infra/main.bicep \
             --query properties.outputs -o json)
           echo "storageAccountName=$(echo $RESULT | jq -r '.storageAccountName.value')" >> $GITHUB_OUTPUT
-          echo "queueName=$(echo $RESULT | jq -r '.queueName.value')" >> $GITHUB_OUTPUT
-
-      - name: create kv
-        id: kv
-        run: |
-          RESULT=$(az deployment group create \
-            --resource-group ${{ env.rg-name }} \
-            --template-file infra/kv.bicep \
-            --query properties.outputs -o json)
-          echo "name=$(echo $RESULT | jq -r '.name.value')" >> $GITHUB_OUTPUT
+          echo "kvName=$(echo $RESULT | jq -r '.kvName.value')" >> $GITHUB_OUTPUT
 
       - name: store connection string in KV
         run: |
           CONN_STR=$(az storage account show-connection-string \
-            --name ${{ steps.storage.outputs.storageAccountName }} \
+            --name ${{ steps.infra.outputs.storageAccountName }} \
             --resource-group ${{ env.rg-name }} \
             --query connectionString -o tsv)
           az keyvault secret set \
-            --vault-name ${{steps.kv.outputs.name}} \
+            --vault-name ${{ steps.infra.outputs.kvName }} \
             --name queue-connection-string \
             --value "$CONN_STR"
-
-      - name: deploy acr
-        id: acr
-        run: |
-          RESULT=$(az deployment group create \
-            --resource-group ${{ env.rg-name }} \
-            --template-file infra/acr.bicep \
-            --query properties.outputs -o json)
-          echo "acrId=$(echo $RESULT | jq -r '.acrId.value')" >> $GITHUB_OUTPUT
-          echo "acrLoginServer=$(echo $RESULT | jq -r '.acrLoginServer.value')" >> $GITHUB_OUTPUT
-
-      - name: deploy aca
-        run: |
-          az deployment group create \
-            --resource-group ${{ env.rg-name }} \
-            --template-file infra/aca.bicep \
-            --parameters acrId=${{ steps.acr.outputs.acrId }} \
-            --parameters queueName=${{ steps.storage.outputs.queueName }} \
-            --parameters kvName=${{ steps.kv.outputs.name }}
