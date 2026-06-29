@@ -1,3 +1,5 @@
+param githubServicePrincipalId string
+
 targetScope = 'resourceGroup'
 
 param location string = resourceGroup().location
@@ -13,6 +15,7 @@ module kv 'kv.bicep' = {
   name: 'kv-deploy'
   params: {
     location: location
+    githubServicePrincipalId: githubServicePrincipalId
   }
 }
 

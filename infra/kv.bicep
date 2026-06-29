@@ -1,3 +1,4 @@
+param githubServicePrincipalId string
 param location string = resourceGroup().location
 param tenantId string = subscription().tenantId
 param skuName string = 'standard'
@@ -16,6 +17,19 @@ resource kv 'Microsoft.KeyVault/vaults@2026-02-01' = {
     enablePurgeProtection: true
     enableSoftDelete: true
     softDeleteRetentionInDays: 7
+  }
+}
+
+resource kvSecretOfficer 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(kv.id, githubServicePrincipalId, 'KvSecretsOfficer')
+  scope: kv
+  properties: {
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      'b86a8fe4-44ce-4948-aee5-eccb2c155cd7' // Key Vault Secrets Officer
+    )
+    principalId: githubServicePrincipalId
+    principalType: 'ServicePrincipal'
   }
 }
 
