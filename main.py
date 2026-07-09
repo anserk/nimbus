@@ -4,11 +4,14 @@ import sys
 import pandas as pd
 import requests
 import structlog
+from azure.storage.blob import BlobServiceClient
 
 log = structlog.get_logger()
 
 
-def fetch_weather(city, lat, lon, start_date, end_date):
+def fetch_weather(
+    city: str, lat: float, lon: float, start_date: str, end_date: str
+) -> pd.DataFrame:
     url = "https://archive-api.open-meteo.com/v1/archive"
     params = {
         "latitude": lat,
@@ -28,7 +31,7 @@ def fetch_weather(city, lat, lon, start_date, end_date):
     return df
 
 
-def main():
+def main() -> None:
     cities = {
         "Chicago": (41.85, -87.65),
         "New York": (40.71, -74.01),
@@ -36,8 +39,14 @@ def main():
         "Atlanta": (33.75, -84.39),
     }
 
-    start_date = os.environ.get("START_DATE", "2020-01-01")
-    end_date = os.environ.get("END_DATE", "2026-06-30")
+    start_date = os.environ.get("START_DATE") or "2020-01-01"
+    end_date = os.environ.get("END_DATE") or "2026-06-30"
+    conn_str = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
+    container_name = os.environ.get("OUTPUT_CONTAINER") or "weather-output"
+
+    if not conn_str:
+        log.error("missing_env_var", var="AZURE_STORAGE_CONNECTION_STRING")
+        sys.exit(1)
 
     log.info(
         "etl_start",
@@ -47,13 +56,25 @@ def main():
     )
 
     try:
+        client = BlobServiceClient.from_connection_string(conn_str)
+
+        container_client = client.get_container_client(container_name)
+        if not container_client.exists():
+            container_client.create_container()
+            log.info("container_created", container=container_name)
+
         total_rows = 0
 
         for city, (lat, lon) in cities.items():
             log.info("city_start", city=city)
 
             df = fetch_weather(city, lat, lon, start_date, end_date)
-            df.to_parquet(f"{city.replace(' ', '_')}.parquet", index=False)
+            parquet_bytes = df.to_parquet(index=True)
+
+            blob_name = f"{city.replace(' ', '_')}_{start_date}_{end_date}.parquet"
+            container_client.get_blob_client(blob=blob_name).upload_blob(
+                parquet_bytes, overwrite=True
+            )
 
             log.info("city_complete", city=city, rows=len(df))
             total_rows += len(df)
