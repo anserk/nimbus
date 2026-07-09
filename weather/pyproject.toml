@@ -1,7 +1,7 @@
 [project]
-name = "nimbus"
+name = "nimbus-weather"
 version = "0.1.0"
-description = "Add your description here"
+description = "Fetches historical hourly weather data from Open-Meteo"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [

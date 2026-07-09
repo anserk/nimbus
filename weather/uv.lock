@@ -237,7 +237,7 @@ wheels = [
 ]
 
 [[package]]
-name = "nimbus"
+name = "nimbus-weather"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
