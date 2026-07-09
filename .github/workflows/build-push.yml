@@ -1,12 +1,14 @@
 on:
   push:
+    branches:
+      - main
+      - develop
     paths:
       - "src/**"
       - "Dockerfile"
 
 env:
   rg-name: rg-learning
-  location: eastus
   registry: mylearningacr
   image-name: etl/weather
 
@@ -31,6 +33,10 @@ jobs:
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
           images: ${{ env.registry }}.azurecr.io/${{ env.image-name }}
+          tags: |
+            type=sha
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=develop,enable=${{ github.ref == 'refs/heads/develop' }}
 
       - name: Build and push Docker image
         id: push
@@ -40,6 +46,14 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Update job image
+        run: |
+          BRANCH=${GITHUB_REF#refs/heads/}
+          az containerapp job update \
+            --name weather-etl-job \
+            --resource-group ${{ env.rg-name }} \
+            --image ${{ env.registry }}.azurecr.io/${{ env.image-name }}:$BRANCH
 
       # - name: Generate artifact attestation
       #   uses: actions/attest@v4

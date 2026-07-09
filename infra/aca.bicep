@@ -2,6 +2,7 @@ param location string = resourceGroup().location
 param acrId string
 param queueName string
 param kvName string
+param acrLoginServer string
 
 resource env 'Microsoft.App/managedEnvironments@2026-01-01' = {
   name: 'env-learning'
@@ -10,7 +11,7 @@ resource env 'Microsoft.App/managedEnvironments@2026-01-01' = {
 }
 
 resource weatherApp 'Microsoft.App/containerApps@2026-01-01' = {
-  name: 'wehateher-app'
+  name: 'weather-app'
   location: location
   identity: {
     type: 'SystemAssigned'
@@ -24,14 +25,13 @@ resource weatherApp 'Microsoft.App/containerApps@2026-01-01' = {
       }
       registries: [
         {
-          server: '${split(acrId, '/')[8]}.azurecr.io'
+          server: acrLoginServer
           identity: 'system'
         }
       ]
       secrets: [
         {
           name: 'queue-connection-string'
-          // keyVaultUrl: 'https://${kvName}.vault.azure.net/secrets/queue-connection-string'
           keyVaultUrl: 'https://${kvName}.${environment().suffixes.keyvaultDns}/secrets/queue-connection-string'
           identity: 'system'
         }
@@ -41,7 +41,7 @@ resource weatherApp 'Microsoft.App/containerApps@2026-01-01' = {
       containers: [
         {
           name: 'weather'
-          image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
+          image: '${acrLoginServer}/etl/weather:latest'
           resources: {
             cpu: json('0.5')
             memory: '1Gi'

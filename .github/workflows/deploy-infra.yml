@@ -29,7 +29,8 @@ jobs:
           RESULT=$(az deployment group create \
             --resource-group ${{ env.rg-name }} \
             --template-file infra/main.bicep \
-            --parameters githubServicePrincipalId=${{ secrets.AZURE_CLIENT_ID }}
+            --parameters githubServicePrincipalId=${{ secrets.AZURE_CLIENT_ID }} \
+            --parameters cities="${{ vars.CITIES }}"
             --query properties.outputs -o json)
           echo "storageAccountName=$(echo $RESULT | jq -r '.storageAccountName.value')" >> $GITHUB_OUTPUT
           echo "kvName=$(echo $RESULT | jq -r '.kvName.value')" >> $GITHUB_OUTPUT

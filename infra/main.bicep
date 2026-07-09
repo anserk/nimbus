@@ -1,4 +1,5 @@
 param githubServicePrincipalId string
+param cities string
 
 targetScope = 'resourceGroup'
 
@@ -30,8 +31,22 @@ module aca 'aca.bicep' = {
   name: 'aca-deploy'
   params: {
     location: location
+    acrLoginServer: acr.outputs.acrLoginServer
     acrId: acr.outputs.acrId
     queueName: storage.outputs.queueName
     kvName: kv.outputs.name
   }
 }
+
+module acajob 'aca-job.bicep' = {
+  name: 'aca-job-deploy'
+  params: {
+    location: location
+    cities: cities
+    acrLoginServer: acr.outputs.acrLoginServer
+    acrId: acr.outputs.acrId
+  }
+}
+
+output storageAccountName string = storage.outputs.storageAccountName
+output kvName string = kv.outputs.name
