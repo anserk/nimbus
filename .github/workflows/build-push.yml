@@ -6,6 +6,7 @@ on:
     paths:
       - "weather/src/**"
       - "weather/Dockerfile"
+      - .github/workflows/**
 
 env:
   rg-name: rg-learning
