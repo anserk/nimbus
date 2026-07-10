@@ -4,8 +4,8 @@ on:
       - main
       - develop
     paths:
-      - "src/**"
-      - "Dockerfile"
+      - "weather/src/**"
+      - "weather/Dockerfile"
 
 env:
   rg-name: rg-learning
@@ -42,7 +42,7 @@ jobs:
         id: push
         uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
         with:
-          context: .
+          context: .weather
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
