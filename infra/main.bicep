@@ -27,16 +27,17 @@ module acr 'acr.bicep' = {
   }
 }
 
-module aca 'aca.bicep' = {
-  name: 'aca-deploy'
-  params: {
-    location: location
-    acrLoginServer: acr.outputs.acrLoginServer
-    acrId: acr.outputs.acrId
-    queueName: storage.outputs.queueName
-    kvName: kv.outputs.name
-  }
-}
+// See notein aca.bicep.
+// module aca 'aca.bicep' = {
+//   name: 'aca-deploy'
+//   params: {
+//     location: location
+//     acrLoginServer: acr.outputs.acrLoginServer
+//     acrId: acr.outputs.acrId
+//     queueName: storage.outputs.queueName
+//     kvName: kv.outputs.name
+//   }
+// }
 
 module acajob 'aca-job.bicep' = {
   name: 'aca-job-deploy'
@@ -45,6 +46,7 @@ module acajob 'aca-job.bicep' = {
     cities: cities
     acrLoginServer: acr.outputs.acrLoginServer
     acrId: acr.outputs.acrId
+    kvName: kv.outputs.name
   }
 }
 

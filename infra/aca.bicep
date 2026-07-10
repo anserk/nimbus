@@ -1,3 +1,8 @@
+// This is not needed anymore. It was just a learning exercise.
+// Not the problem is image needs to exists in acr for this to deploy
+// but image is created in build-push that needs infra created ...
+// chicken and egg.
+
 param location string = resourceGroup().location
 param acrId string
 param queueName string
@@ -32,7 +37,7 @@ resource weatherApp 'Microsoft.App/containerApps@2026-01-01' = {
       secrets: [
         {
           name: 'queue-connection-string'
-          keyVaultUrl: 'https://${kvName}.${environment().suffixes.keyvaultDns}/secrets/queue-connection-string'
+          keyVaultUrl: 'https://${kvName}.vault.azure.net/secrets/queue-connection-string'
           identity: 'system'
         }
       ]
@@ -99,3 +104,5 @@ resource kvSecretUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
     principalType: 'ServicePrincipal'
   }
 }
+
+output envId string = env.id
