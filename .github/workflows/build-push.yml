@@ -30,7 +30,11 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Log in to ACR
-        run: az acr login --name ${{ env.registry }} --expose-token --output none
+        run: |
+          TOKEN=$(az acr login --name ${{ env.registry }} --expose-token --output tsv --query accessToken)
+          docker login ${{ env.registry }}.azurecr.io \
+            --username 00000000-0000-0000-0000-000000000000 \
+            --password $TOKEN
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
