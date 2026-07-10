@@ -1,4 +1,4 @@
-param githubServicePrincipalId string
+param deploymentPrincipalObjectId string
 param cities string
 param deployJob bool = true
 
@@ -17,7 +17,7 @@ module kv 'kv.bicep' = {
   name: 'kv-deploy'
   params: {
     location: location
-    githubServicePrincipalId: githubServicePrincipalId
+    deploymentPrincipalObjectId: deploymentPrincipalObjectId
   }
 }
 
