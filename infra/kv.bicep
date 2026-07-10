@@ -2,7 +2,7 @@ param deploymentPrincipalObjectId string
 param location string = resourceGroup().location
 param tenantId string = subscription().tenantId
 param skuName string = 'standard'
-param kvName string = 'kv-${uniqueString(resourceGroup().id)}'
+param kvName string = 'kv-${uniqueString(resourceGroup().id)}-np'
 
 resource kv 'Microsoft.KeyVault/vaults@2026-02-01' = {
   name: kvName
