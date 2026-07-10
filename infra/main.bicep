@@ -1,5 +1,6 @@
 param githubServicePrincipalId string
 param cities string
+param deployJob bool = true
 
 targetScope = 'resourceGroup'
 
@@ -39,7 +40,7 @@ module acr 'acr.bicep' = {
 //   }
 // }
 
-module acajob 'aca-job.bicep' = {
+module acajob 'aca-job.bicep' = if (deployJob) {
   name: 'aca-job-deploy'
   params: {
     location: location

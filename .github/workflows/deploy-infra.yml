@@ -23,10 +23,7 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: create resource group
-        run: az group create --name ${{ env.rg-name }} --location ${{ env.location }}
-
-      - name: deploy infra
+      - name: deploy core infra
         id: infra
         run: |
           RESULT=$(az deployment group create \
@@ -34,6 +31,7 @@ jobs:
             --template-file infra/main.bicep \
             --parameters githubServicePrincipalId=${{ secrets.AZURE_CLIENT_ID }} \
             --parameters cities="${{ vars.CITIES }}" \
+            --parameters deployJob=false \
             --query properties.outputs -o json)
           echo "storageAccountName=$(echo $RESULT | jq -r '.storageAccountName.value')" >> $GITHUB_OUTPUT
           echo "kvName=$(echo $RESULT | jq -r '.kvName.value')" >> $GITHUB_OUTPUT
@@ -48,3 +46,13 @@ jobs:
             --vault-name ${{ steps.infra.outputs.kvName }} \
             --name queue-connection-string \
             --value "$CONN_STR"
+
+      - name: deploy aca job
+        run: |
+          az deployment group create \
+            --resource-group ${{ env.rg-name }} \
+            --template-file infra/aca-job.bicep \
+            --parameters acrLoginServer=mylearningacr.azurecr.io \
+            --parameters cities="${{ vars.CITIES }}" \
+            --parameters acrId=$(az acr show --name mylearningacr --resource-group rg-learning --query id -o tsv) \
+            --parameters kvName=${{ steps.infra.outputs.kvName }}
