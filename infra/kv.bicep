@@ -16,7 +16,7 @@ resource kv 'Microsoft.KeyVault/vaults@2026-02-01' = {
     enableRbacAuthorization: true
     enablePurgeProtection: false
     enableSoftDelete: false
-    softDeleteRetentionInDays: 0
+    // softDeleteRetentionInDays: 7
   }
 }
 
