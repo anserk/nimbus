@@ -1,6 +1,4 @@
 param deploymentPrincipalObjectId string
-param cities string
-param deployJob bool = true
 
 targetScope = 'resourceGroup'
 
@@ -28,28 +26,8 @@ module acr 'acr.bicep' = {
   }
 }
 
-// See notein aca.bicep.
-// module aca 'aca.bicep' = {
-//   name: 'aca-deploy'
-//   params: {
-//     location: location
-//     acrLoginServer: acr.outputs.acrLoginServer
-//     acrId: acr.outputs.acrId
-//     queueName: storage.outputs.queueName
-//     kvName: kv.outputs.name
-//   }
-// }
-
-module acajob 'aca-job.bicep' = if (deployJob) {
-  name: 'aca-job-deploy'
-  params: {
-    location: location
-    cities: cities
-    acrLoginServer: acr.outputs.acrLoginServer
-    acrId: acr.outputs.acrId
-    kvName: kv.outputs.name
-  }
-}
-
 output storageAccountName string = storage.outputs.storageAccountName
 output kvName string = kv.outputs.name
+output acrLoginServer string = acr.outputs.acrLoginServer
+output acrId string = acr.outputs.acrId
+output outputContainerName string = storage.outputs.outputContainerName

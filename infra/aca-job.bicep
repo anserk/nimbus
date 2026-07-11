@@ -4,6 +4,7 @@ param acrLoginServer string
 param cities string
 param acrId string
 param kvName string
+param outputContainer string
 
 resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: 'id-weather-etl'
@@ -98,6 +99,7 @@ resource weatherJob 'Microsoft.App/jobs@2023-05-01' = {
               name: 'AZURE_STORAGE_CONNECTION_STRING'
               secretRef: 'storage-connection-string'
             }
+            { name: 'OUTPUT_CONTAINER', value: outputContainer }
           ]
         }
       ]
