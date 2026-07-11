@@ -12,9 +12,17 @@ resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   location: location
 }
 
+resource acr 'Microsoft.ContainerRegistry/registries@2025-11-01' existing = {
+  name: last(split(acrId, '/'))
+}
+
+resource kv 'Microsoft.KeyVault/vaults@2026-02-01' existing = {
+  name: kvName
+}
+
 resource acrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(acrId, uami.id, 'AcrPull')
-  scope: resourceGroup()
+  name: guid(acr.id, uami.id, 'AcrPull')
+  scope: acr
   properties: {
     roleDefinitionId: subscriptionResourceId(
       'Microsoft.Authorization/roleDefinitions',
@@ -26,8 +34,8 @@ resource acrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 }
 
 resource kvSecretUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(kvName, uami.id, 'KvSecretsUser')
-  scope: resourceGroup()
+  name: guid(kv.id, uami.id, 'KvSecretsUser')
+  scope: kv
   properties: {
     roleDefinitionId: subscriptionResourceId(
       'Microsoft.Authorization/roleDefinitions',

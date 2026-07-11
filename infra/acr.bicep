@@ -1,11 +1,11 @@
-param arcName string = 'mylearningacr'
+param acrName string = 'mylearningacr'
 param location string = resourceGroup().location
 
 @allowed(['Basic'])
 param acrSku string = 'Basic'
 
 resource acr 'Microsoft.ContainerRegistry/registries@2025-11-01' = {
-  name: arcName
+  name: acrName
   location: location
   sku: {
     name: acrSku
