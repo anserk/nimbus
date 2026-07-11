@@ -49,6 +49,16 @@ jobs:
             --name storage-connection-string \
             --value "$CONN_STR"
 
+      - name: get current job image or default
+        id: img
+        run: |
+          CURRENT_IMAGE=$(az containerapp job show \
+            --name weather-etl-job \
+            --resource-group ${{ env.rg-name }} \
+            --query 'properties.template.containers[0].image' -o tsv 2>/dev/null \
+            || echo "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest")
+          echo "currentImage=$CURRENT_IMAGE" >> $GITHUB_OUTPUT
+
       - name: deploy aca job
         run: |
           az deployment group create \
@@ -58,4 +68,5 @@ jobs:
             --parameters acrId=${{ steps.infra.outputs.acrId }} \
             --parameters kvName=${{ steps.infra.outputs.kvName }} \
             --parameters outputContainer=${{ steps.infra.outputs.outputContainer }} \
-            --parameters cities="${{ vars.CITIES }}"
+            --parameters cities="${{ vars.CITIES }}" \
+            --parameters image=${{ steps.img.outputs.currentImage }}

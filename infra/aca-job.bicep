@@ -5,6 +5,7 @@ param cities string
 param acrId string
 param kvName string
 param outputContainer string
+param image string
 
 resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: 'id-weather-etl'
@@ -85,7 +86,7 @@ resource weatherJob 'Microsoft.App/jobs@2023-05-01' = {
       containers: [
         {
           name: 'weather-etl'
-          image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
+          image: image
           resources: {
             cpu: json('0.5')
             memory: '1Gi'

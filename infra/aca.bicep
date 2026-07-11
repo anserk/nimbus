@@ -8,6 +8,7 @@ param acrId string
 param queueName string
 param kvName string
 param acrLoginServer string
+param image string
 
 resource env 'Microsoft.App/managedEnvironments@2026-01-01' = {
   name: 'env-learning'
@@ -46,7 +47,7 @@ resource weatherApp 'Microsoft.App/containerApps@2026-01-01' = {
       containers: [
         {
           name: 'weather'
-          image: '${acrLoginServer}/etl/weather:latest'
+          image: image
           resources: {
             cpu: json('0.5')
             memory: '1Gi'
