@@ -36,8 +36,8 @@ resource weatherApp 'Microsoft.App/containerApps@2026-01-01' = {
       ]
       secrets: [
         {
-          name: 'queue-connection-string'
-          keyVaultUrl: 'https://${kvName}.vault.azure.net/secrets/queue-connection-string'
+          name: 'storage-connection-string'
+          keyVaultUrl: 'https://${kvName}.vault.azure.net/secrets/storage-connection-string'
           identity: 'system'
         }
       ]
@@ -67,7 +67,7 @@ resource weatherApp 'Microsoft.App/containerApps@2026-01-01' = {
               }
               auth: [
                 {
-                  secretRef: 'queue-connection-string'
+                  secretRef: 'storage-connection-string'
                   triggerParameter: 'connection'
                 }
               ]

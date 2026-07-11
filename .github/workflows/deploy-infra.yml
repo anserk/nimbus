@@ -45,7 +45,7 @@ jobs:
             --query connectionString -o tsv)
           az keyvault secret set \
             --vault-name ${{ steps.infra.outputs.kvName }} \
-            --name queue-connection-string \
+            --name storage-connection-string \
             --value "$CONN_STR"
 
       - name: deploy aca job

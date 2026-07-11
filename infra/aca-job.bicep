@@ -74,8 +74,8 @@ resource weatherJob 'Microsoft.App/jobs@2023-05-01' = {
       ]
       secrets: [
         {
-          name: 'queue-connection-string'
-          keyVaultUrl: 'https://${kvName}.vault.azure.net/secrets/queue-connection-string'
+          name: 'storage-connection-string'
+          keyVaultUrl: 'https://${kvName}.vault.azure.net/secrets/storage-connection-string'
           identity: uami.id
         }
       ]
@@ -93,6 +93,10 @@ resource weatherJob 'Microsoft.App/jobs@2023-05-01' = {
             {
               name: 'CITIES'
               value: cities
+            }
+            {
+              name: 'AZURE_STORAGE_CONNECTION_STRING'
+              secretRef: 'storage-connection-string'
             }
           ]
         }
