@@ -29,31 +29,15 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Log in to ACR
+      - name: Build and push to ACR
         run: |
-          TOKEN=$(az acr login --name ${{ env.registry }} --expose-token --output tsv --query accessToken)
-          docker login ${{ env.registry }}.azurecr.io \
-            --username 00000000-0000-0000-0000-000000000000 \
-            --password $TOKEN
-
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
-        with:
-          images: ${{ env.registry }}.azurecr.io/${{ env.image-name }}
-          tags: |
-            type=sha
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=develop,enable=${{ github.ref == 'refs/heads/develop' }}
-
-      - name: Build and push Docker image
-        id: push
-        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
-        with:
-          context: ./weather
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          BRANCH=${GITHUB_REF#refs/heads/}
+          az acr build \
+            --registry ${{ env.registry }} \
+            --image ${{ env.image-name }}:${{ github.sha }} \
+            --image ${{ env.image-name }}:$BRANCH \
+            --file ./weather/Dockerfile \
+            ./weather
 
       - name: Update job image
         run: |
