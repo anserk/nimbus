@@ -5,6 +5,37 @@ param cities string
 param acrId string
 param kvName string
 
+resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: 'id-weather-etl'
+  location: location
+}
+
+resource acrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(acrId, uami.id, 'AcrPull')
+  scope: resourceGroup()
+  properties: {
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      '7f951dda-4ed3-4680-a7ca-43fe172d538d'
+    )
+    principalId: uami.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource kvSecretUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(kvName, uami.id, 'KvSecretsUser')
+  scope: resourceGroup()
+  properties: {
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      '4633458b-17de-408a-b874-0445c86b69e6'
+    )
+    principalId: uami.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
 resource env 'Microsoft.App/managedEnvironments@2026-01-01' = {
   name: 'env-learning'
   location: location
@@ -14,8 +45,15 @@ resource env 'Microsoft.App/managedEnvironments@2026-01-01' = {
 resource weatherJob 'Microsoft.App/jobs@2023-05-01' = {
   name: 'weather-etl-job'
   location: location
+  dependsOn: [
+    acrPull
+    kvSecretUser
+  ]
   identity: {
-    type: 'SystemAssigned'
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${uami.id}': {}
+    }
   }
   properties: {
     environmentId: env.id
@@ -31,14 +69,14 @@ resource weatherJob 'Microsoft.App/jobs@2023-05-01' = {
       registries: [
         {
           server: acrLoginServer
-          identity: 'system'
+          identity: uami.id
         }
       ]
       secrets: [
         {
           name: 'queue-connection-string'
           keyVaultUrl: 'https://${kvName}.vault.azure.net/secrets/queue-connection-string'
-          identity: 'system'
+          identity: uami.id
         }
       ]
     }
@@ -46,10 +84,6 @@ resource weatherJob 'Microsoft.App/jobs@2023-05-01' = {
       containers: [
         {
           name: 'weather-etl'
-          // image: '${acrLoginServer}/etl/weather:latest'
-          // this needs to exists, so use placeholder when building infra.
-          // Helm, Flux / ArgoCD, Azure Deployment Environments deal with this
-          // shoud do a follow up.
           image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
           resources: {
             cpu: json('0.5')
@@ -64,31 +98,5 @@ resource weatherJob 'Microsoft.App/jobs@2023-05-01' = {
         }
       ]
     }
-  }
-}
-
-resource arcPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(acrId, weatherJob.id, 'ArcPull')
-  scope: resourceGroup()
-  properties: {
-    roleDefinitionId: subscriptionResourceId(
-      'Microsoft.Authorization/roleDefinitions',
-      '7f951dda-4ed3-4680-a7ca-43fe172d538d'
-    )
-    principalId: weatherJob.identity.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-resource kvSecretUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(kvName, weatherJob.id, 'KvSecretsUser')
-  scope: resourceGroup()
-  properties: {
-    roleDefinitionId: subscriptionResourceId(
-      'Microsoft.Authorization/roleDefinitions',
-      '4633458b-17de-408a-b874-0445c86b69e6'
-    )
-    principalId: weatherJob.identity.principalId
-    principalType: 'ServicePrincipal'
   }
 }
