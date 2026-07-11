@@ -45,7 +45,7 @@ jobs:
           az containerapp job update \
             --name weather-etl-job \
             --resource-group ${{ env.rg-name }} \
-            --image ${{ env.registry }}.azurecr.io/${{ env.image-name }}:$BRANCH
+            --image ${{ env.registry }}.azurecr.io/${{ env.image-name }}:${{ github.sha }}
 
       # - name: Generate artifact attestation
       #   uses: actions/attest@v4
