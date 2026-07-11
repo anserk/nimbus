@@ -1,12 +1,43 @@
+import json
 import os
 import sys
+from dataclasses import dataclass
+from pathlib import Path
+from typing import List
 
 import pandas as pd
 import requests
 import structlog
 from azure.storage.blob import BlobServiceClient
 
+
+@dataclass(frozen=True)
+class City:
+    name: str
+    lat: float
+    lon: float
+
+
 log = structlog.get_logger()
+
+CITY_COORDS = json.loads(Path(__file__).parent.joinpath("cities.json").read_text())
+
+
+def parse_cities(cities_raw: str) -> List[City]:
+    names = [c.strip() for c in cities_raw.split(",") if c.strip()]
+    if not names:
+        log.error("empty_city_list")
+        sys.exit(1)
+    missing = [n for n in names if n not in CITY_COORDS]
+    if missing:
+        log.error("unknown_cities", cities=missing, known=len(CITY_COORDS))
+        sys.exit(1)
+
+    # Splat upacks tuple in order, so lat lon,
+    # matches the json file content.
+    cities = [City(n, *CITY_COORDS[n]) for n in names]
+
+    return cities
 
 
 def fetch_weather(
@@ -32,25 +63,25 @@ def fetch_weather(
 
 
 def main() -> None:
-    cities = {
-        "Chicago": (41.85, -87.65),
-        "New York": (40.71, -74.01),
-        "Los Angeles": (34.05, -118.24),
-        "Atlanta": (33.75, -84.39),
-    }
 
     start_date = os.environ.get("START_DATE") or "2020-01-01"
     end_date = os.environ.get("END_DATE") or "2026-06-30"
     conn_str = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
     container_name = os.environ.get("OUTPUT_CONTAINER") or "weather-output"
+    cities_raw = os.environ.get("CITIES")
 
+    if not cities_raw:
+        log.error("missing_env_var", var="CITIES")
+        sys.exit(1)
     if not conn_str:
         log.error("missing_env_var", var="AZURE_STORAGE_CONNECTION_STRING")
         sys.exit(1)
 
+    cities = parse_cities(cities_raw)
+
     log.info(
         "etl_start",
-        cities=list(cities.keys()),
+        cities=[c.name for c in cities],
         start_date=start_date,
         end_date=end_date,
     )
@@ -65,18 +96,18 @@ def main() -> None:
 
         total_rows = 0
 
-        for city, (lat, lon) in cities.items():
-            log.info("city_start", city=city)
+        for city in cities:
+            log.info("city_start", city=city.name)
 
-            df = fetch_weather(city, lat, lon, start_date, end_date)
+            df = fetch_weather(city.name, city.lat, city.lon, start_date, end_date)
             parquet_bytes = df.to_parquet(index=True)
 
-            blob_name = f"{city.replace(' ', '_')}_{start_date}_{end_date}.parquet"
+            blob_name = f"{city.name.replace(' ', '_')}_{start_date}_{end_date}.parquet"
             container_client.get_blob_client(blob=blob_name).upload_blob(
                 parquet_bytes, overwrite=True
             )
 
-            log.info("city_complete", city=city, rows=len(df))
+            log.info("city_complete", city=city.name, rows=len(df))
             total_rows += len(df)
 
         log.info("etl_complete", total_rows=total_rows)
