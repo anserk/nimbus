@@ -38,6 +38,7 @@ jobs:
           echo "acrId=$(echo $RESULT | jq -r '.acrId.value')" >> $GITHUB_OUTPUT
           echo "outputContainer=$(echo $RESULT | jq -r '.outputContainerName.value')" >> $GITHUB_OUTPUT
           echo "queueName=$(echo $RESULT | jq -r '.queueName.value')" >> $GITHUB_OUTPUT
+          echo "workspaceName=$(echo $RESULT | jq -r '.workspaceName.value')" >> $GITHUB_OUTPUT
 
 
       - name: get current job image or default
@@ -61,4 +62,5 @@ jobs:
             --parameters storageAccountId=${{ steps.infra.outputs.storageAccountId }} \
             --parameters storageAccountName=${{ steps.infra.outputs.storageAccountName }} \
             --parameters image=${{ steps.img.outputs.currentImage }} \
-            --parameters queueName=${{ steps.infra.outputs.queueName }}
+            --parameters queueName=${{ steps.infra.outputs.queueName }} \
+            --parameters workspaceName=${{ steps.infra.outputs.workspaceName }} \

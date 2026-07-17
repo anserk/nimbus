@@ -16,8 +16,16 @@ module acr 'acr.bicep' = {
   }
 }
 
+module wrk 'monitoring.bicep' = {
+  name: 'wrk-deploy'
+  params: {
+    location: location
+  }
+}
+
 output storageAccountName string = storage.outputs.storageAccountName
 output acrLoginServer string = acr.outputs.acrLoginServer
 output acrId string = acr.outputs.acrId
 output outputContainerName string = storage.outputs.outputContainerName
 output queueName string = storage.outputs.queueName
+output workspaceName string = wrk.outputs.name

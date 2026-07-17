@@ -7,6 +7,7 @@ param image string
 param storageAccountId string
 param storageAccountName string
 param queueName string
+param workspaceName string
 
 resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: 'id-weather-etl'
@@ -19,6 +20,10 @@ resource acr 'Microsoft.ContainerRegistry/registries@2025-11-01' existing = {
 
 resource storage 'Microsoft.Storage/storageAccounts@2026-04-01' existing = {
   name: storageAccountName
+}
+
+resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2025-07-01' existing = {
+  name: workspaceName
 }
 
 resource acrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
@@ -63,7 +68,15 @@ resource queueProcessor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 resource env 'Microsoft.App/managedEnvironments@2026-01-01' = {
   name: 'env-learning'
   location: location
-  properties: {}
+  properties: {
+    appLogsConfiguration: {
+      destination: 'log-analytics'
+      logAnalyticsConfiguration: {
+        customerId: logAnalytics.properties.customerId
+        sharedKey: logAnalytics.listKeys().primarySharedKey
+      }
+    }
+  }
 }
 
 resource weatherJob 'Microsoft.App/jobs@2026-01-01' = {
@@ -136,4 +149,5 @@ resource weatherJob 'Microsoft.App/jobs@2026-01-01' = {
       ]
     }
   }
+
 }
