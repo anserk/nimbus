@@ -13,8 +13,6 @@ if [ -z "$SUBSCRIPTION_ID" ] || [ -z "$RG_NAME" ] || [ -z "$SP_OBJECT_ID" ]; the
   exit 1
 fi
 
-echo "Creating resource group $RG_NAME - $LOCATION..."
-az group create --name $RG_NAME --location $LOCATION
 
 echo "Granting Contributor on $RG_NAME..."
 az role assignment create \
