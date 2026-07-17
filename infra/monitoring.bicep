@@ -9,5 +9,4 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   }
 }
 
-output workspaceId string = logAnalytics.id
-output customerId string = logAnalytics.properties.customerId
+output name string = logAnalytics.name
