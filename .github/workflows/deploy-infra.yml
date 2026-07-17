@@ -31,24 +31,14 @@ jobs:
           RESULT=$(az deployment group create \
             --resource-group ${{ env.rg-name }} \
             --template-file infra/main.bicep \
-            --parameters deploymentPrincipalObjectId=${{ secrets.AZURE_OBJECT_ID }} \
             --query properties.outputs -o json)
           echo "storageAccountName=$(echo $RESULT | jq -r '.storageAccountName.value')" >> $GITHUB_OUTPUT
-          echo "kvName=$(echo $RESULT | jq -r '.kvName.value')" >> $GITHUB_OUTPUT
+          echo "storageAccountId=$(echo $RESULT | jq -r '.storageAccountId.value')" >> $GITHUB_OUTPUT
           echo "acrLoginServer=$(echo $RESULT | jq -r '.acrLoginServer.value')" >> $GITHUB_OUTPUT
           echo "acrId=$(echo $RESULT | jq -r '.acrId.value')" >> $GITHUB_OUTPUT
           echo "outputContainer=$(echo $RESULT | jq -r '.outputContainerName.value')" >> $GITHUB_OUTPUT
+          echo "queueName=$(echo $RESULT | jq -r '.queueName.value')" >> $GITHUB_OUTPUT
 
-      - name: store connection string in KV
-        run: |
-          CONN_STR=$(az storage account show-connection-string \
-            --name ${{ steps.infra.outputs.storageAccountName }} \
-            --resource-group ${{ env.rg-name }} \
-            --query connectionString -o tsv)
-          az keyvault secret set \
-            --vault-name ${{ steps.infra.outputs.kvName }} \
-            --name storage-connection-string \
-            --value "$CONN_STR"
 
       - name: get current job image or default
         id: img
@@ -67,7 +57,8 @@ jobs:
             --template-file infra/aca-job.bicep \
             --parameters acrLoginServer=${{ steps.infra.outputs.acrLoginServer }} \
             --parameters acrId=${{ steps.infra.outputs.acrId }} \
-            --parameters kvName=${{ steps.infra.outputs.kvName }} \
             --parameters outputContainer=${{ steps.infra.outputs.outputContainer }} \
-            --parameters cities="${{ vars.CITIES }}" \
-            --parameters image=${{ steps.img.outputs.currentImage }}
+            --parameters storageAccountId=${{ steps.infra.outputs.storageAccountId }} \
+            --parameters storageAccountName=${{ steps.infra.outputs.storageAccountName }} \
+            --parameters image=${{ steps.img.outputs.currentImage }} \
+            --parameters queueName=${{ steps.infra.outputs.queueName }}
