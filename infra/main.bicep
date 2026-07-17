@@ -20,3 +20,4 @@ output storageAccountName string = storage.outputs.storageAccountName
 output acrLoginServer string = acr.outputs.acrLoginServer
 output acrId string = acr.outputs.acrId
 output outputContainerName string = storage.outputs.outputContainerName
+output queueName string = storage.outputs.queueName
