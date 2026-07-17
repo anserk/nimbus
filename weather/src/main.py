@@ -2,13 +2,13 @@ import json
 import os
 import sys
 from dataclasses import dataclass
-from pathlib import Path
-from typing import List
 
 import pandas as pd
 import requests
 import structlog
-from azure.storage.blob import BlobServiceClient
+from azure.identity import DefaultAzureCredential
+from azure.storage.blob import BlobClient
+from azure.storage.queue import QueueClient
 
 
 @dataclass(frozen=True)
@@ -19,25 +19,6 @@ class City:
 
 
 log = structlog.get_logger()
-
-CITY_COORDS = json.loads(Path(__file__).parent.joinpath("cities.json").read_text())
-
-
-def parse_cities(cities_raw: str) -> List[City]:
-    names = [c.strip() for c in cities_raw.split(",") if c.strip()]
-    if not names:
-        log.error("empty_city_list")
-        sys.exit(1)
-    missing = [n for n in names if n not in CITY_COORDS]
-    if missing:
-        log.error("unknown_cities", cities=missing, known=len(CITY_COORDS))
-        sys.exit(1)
-
-    # Splat upacks tuple in order, so lat lon,
-    # matches the json file content.
-    cities = [City(n, *CITY_COORDS[n]) for n in names]
-
-    return cities
 
 
 def fetch_weather(
@@ -63,54 +44,67 @@ def fetch_weather(
 
 
 def main() -> None:
-
+    storage_account_name = os.environ.get("AZURE_STORAGE_ACCOUNT_NAME") or None
+    queue_name = os.environ.get("QUEUE_NAME") or None
     start_date = os.environ.get("START_DATE") or "2020-01-01"
     end_date = os.environ.get("END_DATE") or "2026-06-30"
-    conn_str = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
     container_name = os.environ.get("OUTPUT_CONTAINER") or "weather-output"
-    cities_raw = os.environ.get("CITIES")
 
-    if not cities_raw:
-        log.error("missing_env_var", var="CITIES")
-        sys.exit(1)
-    if not conn_str:
-        log.error("missing_env_var", var="AZURE_STORAGE_CONNECTION_STRING")
+    if storage_account_name is None or queue_name is None:
+        log.error("Missing storage acconut name or queue name")
         sys.exit(1)
 
-    cities = parse_cities(cities_raw)
+    storage_account_url = f"https://{storage_account_name}.blob.core.windows.net"
+    queue_account_url = f"https://{storage_account_name}.queue.core.windows.net"
+    default_credential = DefaultAzureCredential()
+
+    queue_client = QueueClient(
+        queue_account_url, queue_name=queue_name, credential=default_credential
+    )
+
+    message = None
+    try:
+        message = queue_client.receive_messages(max_messages=1).next()
+    except StopIteration:
+        pass
+
+    if message is None:
+        log.info("Empty queue, nothing to do.")
+        sys.exit(0)
+
+    if message.dequeue_count is not None and message.dequeue_count >= 3:
+        log.error(f"Message {message.id} failed repeatedly. Deleting.")
+        queue_client.delete_message(message=message)
+        sys.exit(1)
+
+    data = json.loads(message.content)
+    city = City(name=data["city"], lat=data["lat"], lon=data["lon"])
+
+    blob_name = f"{city.name.replace(' ', '_')}_{start_date}_{end_date}.parquet"
+    blob_client = BlobClient(
+        storage_account_url,
+        container_name=container_name,
+        blob_name=blob_name,
+        credential=default_credential,
+    )
 
     log.info(
-        "etl_start",
-        cities=[c.name for c in cities],
+        "city_start",
+        city=city.name,
         start_date=start_date,
         end_date=end_date,
     )
 
     try:
-        client = BlobServiceClient.from_connection_string(conn_str)
+        df = fetch_weather(city.name, city.lat, city.lon, start_date, end_date)
+        parquet_bytes = df.to_parquet(index=True)
 
-        container_client = client.get_container_client(container_name)
-        if not container_client.exists():
-            container_client.create_container()
-            log.info("container_created", container=container_name)
+        blob_client.upload_blob(parquet_bytes, overwrite=True)
 
-        total_rows = 0
+        queue_client.delete_message(message=message)
 
-        for city in cities:
-            log.info("city_start", city=city.name)
+        log.info("city_complete", city=city.name, rows=len(df))
 
-            df = fetch_weather(city.name, city.lat, city.lon, start_date, end_date)
-            parquet_bytes = df.to_parquet(index=True)
-
-            blob_name = f"{city.name.replace(' ', '_')}_{start_date}_{end_date}.parquet"
-            container_client.get_blob_client(blob=blob_name).upload_blob(
-                parquet_bytes, overwrite=True
-            )
-
-            log.info("city_complete", city=city.name, rows=len(df))
-            total_rows += len(df)
-
-        log.info("etl_complete", total_rows=total_rows)
         sys.exit(0)
 
     except Exception as e:
