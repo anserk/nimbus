@@ -9,6 +9,12 @@ import structlog
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobClient
 from azure.storage.queue import QueueClient
+from tenacity import (
+    retry,
+    retry_if_exception,
+    stop_after_attempt,
+    wait_random_exponential,
+)
 
 
 @dataclass(frozen=True)
@@ -21,6 +27,21 @@ class City:
 log = structlog.get_logger()
 
 
+def should_retry(exception: BaseException):
+    """Return True if the request should be retried."""
+    return bool(
+        isinstance(exception, requests.exceptions.HTTPError)
+        and exception.response is not None
+        and exception.response.status_code in (429, 500, 502, 503, 504)
+    )
+
+
+@retry(
+    stop=stop_after_attempt(5),
+    wait=wait_random_exponential(multiplier=1, min=4, max=10),
+    retry=retry_if_exception(should_retry),
+    reraise=True
+)
 def fetch_weather(
     city: str, lat: float, lon: float, start_date: str, end_date: str
 ) -> pd.DataFrame:
@@ -72,13 +93,13 @@ def main() -> None:
         log.info("Empty queue, nothing to do.")
         sys.exit(0)
 
-    if message.dequeue_count is not None and message.dequeue_count >= 3:
-        log.error(f"Message {message.id} failed repeatedly. Deleting.")
+    try:
+        data = json.loads(message.content)
+        city = City(name=data["city"], lat=data["lat"], lon=data["lon"])
+    except (ValueError, KeyError) as e:
+        log.error("poison_message", message_id=message.id, exception=str(e))
         queue_client.delete_message(message=message)
-        sys.exit(1)
-
-    data = json.loads(message.content)
-    city = City(name=data["city"], lat=data["lat"], lon=data["lon"])
+        sys.exit(0)
 
     blob_name = f"{city.name.replace(' ', '_')}_{start_date}_{end_date}.parquet"
     blob_client = BlobClient(

@@ -65,6 +65,19 @@ resource queueProcessor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   }
 }
 
+resource queueDataReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storageAccountId, uami.id, 'queueDataReader')
+  scope: storage
+  properties: {
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      '19e7f393-937e-4f77-808e-94535e297925'
+    )
+    principalId: uami.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
 resource env 'Microsoft.App/managedEnvironments@2026-01-01' = {
   name: 'env-learning'
   location: location
@@ -86,6 +99,7 @@ resource weatherJob 'Microsoft.App/jobs@2026-01-01' = {
     acrPull
     blobContributor
     queueProcessor
+    queueDataReader
   ]
   identity: {
     type: 'UserAssigned'
@@ -103,7 +117,7 @@ resource weatherJob 'Microsoft.App/jobs@2026-01-01' = {
         parallelism: 1
         replicaCompletionCount: 1
         scale: {
-          maxExecutions: 100
+          maxExecutions: 10
           minExecutions: 0
           pollingInterval: 30
           rules: [
