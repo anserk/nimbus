@@ -36,9 +36,11 @@ jobs:
           echo "storageAccountId=$(echo $RESULT | jq -r '.storageAccountId.value')" >> $GITHUB_OUTPUT
           echo "acrLoginServer=$(echo $RESULT | jq -r '.acrLoginServer.value')" >> $GITHUB_OUTPUT
           echo "acrId=$(echo $RESULT | jq -r '.acrId.value')" >> $GITHUB_OUTPUT
-          echo "outputContainer=$(echo $RESULT | jq -r '.outputContainerName.value')" >> $GITHUB_OUTPUT
-          echo "queueName=$(echo $RESULT | jq -r '.queueName.value')" >> $GITHUB_OUTPUT
+          echo "weatherOutputContainerName=$(echo $RESULT | jq -r '.weatherOutputContainerName.value')" >> $GITHUB_OUTPUT
+          echo "weatherQueueName=$(echo $RESULT | jq -r '.weatherQueueName.value')" >> $GITHUB_OUTPUT
           echo "workspaceName=$(echo $RESULT | jq -r '.workspaceName.value')" >> $GITHUB_OUTPUT
+          echo "trafficOutputContainerName=$(echo $RESULT | jq -r '.trafficOutputContainerName.value')" >> $GITHUB_OUTPUT
+          echo "trafficQueueName=$(echo $RESULT | jq -r '.trafficQueueName.value')" >> $GITHUB_OUTPUT
 
 
       - name: get current job image or default
@@ -58,9 +60,9 @@ jobs:
             --template-file infra/aca-job.bicep \
             --parameters acrLoginServer=${{ steps.infra.outputs.acrLoginServer }} \
             --parameters acrId=${{ steps.infra.outputs.acrId }} \
-            --parameters outputContainer=${{ steps.infra.outputs.outputContainer }} \
+            --parameters outputContainer=${{ steps.infra.outputs.weatherOutputContainerName }} \
             --parameters storageAccountId=${{ steps.infra.outputs.storageAccountId }} \
             --parameters storageAccountName=${{ steps.infra.outputs.storageAccountName }} \
             --parameters image=${{ steps.img.outputs.currentImage }} \
-            --parameters queueName=${{ steps.infra.outputs.queueName }} \
-            --parameters workspaceName=${{ steps.infra.outputs.workspaceName }} \
+            --parameters weatherQueueName=${{ steps.infra.outputs.weatherQueueName }} \
+            --parameters workspaceName=${{ steps.infra.outputs.workspaceName }}
