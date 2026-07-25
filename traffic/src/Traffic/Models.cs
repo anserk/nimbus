@@ -1,5 +1,7 @@
-record City(
-    string Name,
+using System.Text.Json.Serialization;
+
+record CityMessage(
+    string City,
     double Lat,
     double Lon);
 
