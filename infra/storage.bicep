@@ -25,14 +25,14 @@ resource queueService 'Microsoft.Storage/storageAccounts/queueServices@2026-04-0
   name: 'default'
 }
 
-resource weatherQueue 'Microsoft.Storage/storageAccounts/queueServices/queues@2026-04-01' = {
-  parent: queueService
-  name: 'weather-queue'
-}
-
 resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2026-04-01' = {
   parent: storageAccount
   name: 'default'
+}
+
+resource weatherQueue 'Microsoft.Storage/storageAccounts/queueServices/queues@2026-04-01' = {
+  parent: queueService
+  name: 'weather-queue'
 }
 
 resource weatherOutput 'Microsoft.Storage/storageAccounts/blobServices/containers@2026-04-01' = {
@@ -40,7 +40,19 @@ resource weatherOutput 'Microsoft.Storage/storageAccounts/blobServices/container
   name: 'weather-output'
 }
 
+resource trafficQueue 'Microsoft.Storage/storageAccounts/queueServices/queues@2026-04-01' = {
+  parent: queueService
+  name: 'traffic-queue'
+}
+
+resource trafficOutput 'Microsoft.Storage/storageAccounts/blobServices/containers@2026-04-01' = {
+  parent: blobService
+  name: 'traffic-output'
+}
+
 output storageAccountName string = storageAccountName
 output storageAccountId string = storageAccount.id
-output queueName string = weatherQueue.name
-output outputContainerName string = weatherOutput.name
+output weatherQueueName string = weatherQueue.name
+output weatherOutputContainerName string = weatherOutput.name
+output trafficQueueName string = trafficQueue.name
+output trafficOutputContainerName string = trafficOutput.name

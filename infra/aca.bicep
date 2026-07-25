@@ -5,7 +5,7 @@
 
 param location string = resourceGroup().location
 param acrId string
-param queueName string
+param weatherQueueName string
 param kvName string
 param acrLoginServer string
 param image string
@@ -63,7 +63,7 @@ resource weatherApp 'Microsoft.App/containerApps@2026-01-01' = {
             custom: {
               type: 'azure-queue'
               metadata: {
-                queueName: queueName
+                queueName: weatherQueueName
                 queueLength: '1'
               }
               auth: [

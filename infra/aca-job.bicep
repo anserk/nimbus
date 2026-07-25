@@ -6,7 +6,7 @@ param outputContainer string
 param image string
 param storageAccountId string
 param storageAccountName string
-param queueName string
+param weatherQueueName string
 param workspaceName string
 
 resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
@@ -127,7 +127,7 @@ resource weatherJob 'Microsoft.App/jobs@2026-01-01' = {
               identity: uami.id
               metadata: any({
                 accountName: storageAccountName
-                queueName:  queueName
+                queueName:  weatherQueueName
                 queueLength: '1'
               })
             }
@@ -156,7 +156,7 @@ resource weatherJob 'Microsoft.App/jobs@2026-01-01' = {
               value: storageAccountName
             }
             { name: 'OUTPUT_CONTAINER', value: outputContainer }
-            { name: 'QUEUE_NAME', value: queueName}
+            { name: 'QUEUE_NAME', value: weatherQueueName}
             { name: 'AZURE_CLIENT_ID', value: uami.properties.clientId}
           ]
         }
