@@ -6,6 +6,8 @@ using Azure.Storage.Blobs;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
 using Microsoft.Extensions.Logging;
+using Polly;
+using System.Net;
 
 using ILoggerFactory factory = LoggerFactory.Create(builder =>
 {
@@ -15,14 +17,23 @@ using ILoggerFactory factory = LoggerFactory.Create(builder =>
 ILogger logger = factory.CreateLogger<Program>();
 
 const double OFFSET_DELTA = 0.25;
+List<HttpStatusCode> RetryStatuses =
+[
+    HttpStatusCode.TooManyRequests,        // 429
+    HttpStatusCode.InternalServerError,    // 500
+    HttpStatusCode.BadGateway,             // 502
+    HttpStatusCode.ServiceUnavailable,     // 503
+    HttpStatusCode.GatewayTimeout          // 504
+];
 
 IConfigurationRoot config = new ConfigurationBuilder()
     .AddUserSecrets<Program>()
+    .AddEnvironmentVariables()
     .Build();
 
 var key = config["TOMTOM_API_KEY"]
     ?? throw new InvalidOperationException("TOMTOM_API_KEY not set");
-var accountName = "acname";
+var accountName = "1";
 var containerName = "traffic-output";
 var queueName = "traffic-queue";
 
@@ -30,6 +41,22 @@ HttpClient httpClient = new()
 {
     BaseAddress = new Uri("https://api.tomtom.com")
 };
+
+ResiliencePipeline<HttpResponseMessage> pipeline = new ResiliencePipelineBuilder<HttpResponseMessage>()
+    .AddRetry(new()
+    {
+        ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
+            .HandleResult(r => RetryStatuses.Contains(r.StatusCode)),
+        BackoffType = DelayBackoffType.Exponential,
+        UseJitter = true,
+        MaxRetryAttempts = 5,
+        OnRetry = args =>
+        {
+            args.Outcome.Result?.Dispose();
+            return default;
+        }
+    })
+    .Build();
 
 var queueClient = new QueueClient(
     new Uri($"https://{accountName}.queue.core.windows.net/{queueName}"),
@@ -75,8 +102,9 @@ var fields = "{incidents{properties{id,iconCategory,startTime,magnitudeOfDelay,e
 
 try
 {
-    using HttpResponseMessage response = await httpClient
-        .GetAsync($"/traffic/services/5/incidentDetails?bbox={bbox}&fields={fields}&key={key}");
+    using HttpResponseMessage response = await pipeline.ExecuteAsync(
+        async ct => await httpClient
+            .GetAsync($"/traffic/services/5/incidentDetails?bbox={bbox}&fields={fields}&key={key}", ct));
 
     response.WriteRequestToConsole();
     response.EnsureSuccessStatusCode();
@@ -102,7 +130,7 @@ try
 
     if (incidents is null)
     {
-        logger.LogInformation("etl_failed, unable to parse response.");
+        logger.LogError("etl_failed, unable to parse response.");
         return 1;
     }
 
