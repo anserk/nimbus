@@ -33,9 +33,12 @@ IConfigurationRoot config = new ConfigurationBuilder()
 
 var key = config["TOMTOM_API_KEY"]
     ?? throw new InvalidOperationException("TOMTOM_API_KEY not set");
-var accountName = "1";
-var containerName = "traffic-output";
-var queueName = "traffic-queue";
+var accountName = Environment.GetEnvironmentVariable("AZURE_STORAGE_ACCOUNT_NAME")
+    ?? throw new InvalidOperationException("AZURE_STORAGE_ACCOUNT_NAME not set");
+var containerName = Environment.GetEnvironmentVariable("OUTPUT_CONTAINER")
+    ?? throw new InvalidOperationException("OUTPUT_CONTAINER not set");
+var queueName = Environment.GetEnvironmentVariable("QUEUE_NAME")
+    ?? throw new InvalidOperationException("QUEUE_NAME not set");
 
 HttpClient httpClient = new()
 {
@@ -106,7 +109,6 @@ try
         async ct => await httpClient
             .GetAsync($"/traffic/services/5/incidentDetails?bbox={bbox}&fields={fields}&key={key}", ct));
 
-    response.WriteRequestToConsole();
     response.EnsureSuccessStatusCode();
 
     var jsonResponse = await response.Content.ReadAsStringAsync();
